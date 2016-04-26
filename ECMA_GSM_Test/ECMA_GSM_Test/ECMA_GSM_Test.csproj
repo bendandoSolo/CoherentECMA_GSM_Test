@@ -56,6 +56,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Converters\BooltoVisibilityConverter.cs" />
+    <Compile Include="Models\SerialConnection.cs" />
     <Compile Include="Utilities\DelegateCommand.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Views\Logo.xaml.cs" />
@@ -114,9 +115,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Models\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Resource Include="Images\RecordingDot.png" />
     <Resource Include="Images\Refresh.png" />
