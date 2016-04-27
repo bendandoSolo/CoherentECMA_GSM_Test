@@ -222,10 +222,11 @@ namespace ECMA_GSM_Test.ViewModels
         private void DisplayResults(int FirstModemTimesSent,int SecondModemTimesSent,int FirstModemTimesRecieved,int SecondModemTimesRecieved,
             int FirstModemTimesRecievedNothing,int SecondModemTimesRecievedNothing)
         {
-            ResultText += "RESULTS\n";
+            ResultText = "RESULTS\n";
 
             ResultText += "FirstModem Sent " + FirstModemTimesSent + " times, recieved correctly " + FirstModemTimesRecieved + " times, recieved nothing: " + FirstModemTimesRecievedNothing + "\n";
             ResultText += "SecondModem Sent " + SecondModemTimesSent + " times, recieved correctly " + SecondModemTimesRecieved + " times, recieved nothing: " + SecondModemTimesRecievedNothing + "\n";
+            
 
             //DateTime ellapsedTime = startOfTest - DateTime.Now;
 
@@ -235,7 +236,7 @@ namespace ECMA_GSM_Test.ViewModels
             else
             {
                 if ((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60 > 0)
-                    ResultText += Math.Truncate(DateTime.Now.Subtract(startOfTest).TotalHours) + " hours, " + Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes";
+                    ResultText +=  Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes";
             }
 
         }
