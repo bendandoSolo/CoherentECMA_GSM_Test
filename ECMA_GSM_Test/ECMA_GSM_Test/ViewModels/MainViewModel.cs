@@ -37,6 +37,13 @@ namespace ECMA_GSM_Test.ViewModels
                     OnPropertyChanged(new PropertyChangedEventArgs("RecordOn"));}
             }
         }
+    
+        private readonly int[] baudRates = { 115200, 57600, 38400, 19200, 9600, 4800, 2400, 1200, 600, 300 };
+
+        public int[] BaudRates
+        {
+            get { return baudRates; }
+        }
 
         private string selectedSerialPort;
         public string SelectedSerialPort{
@@ -47,6 +54,67 @@ namespace ECMA_GSM_Test.ViewModels
                     OnPropertyChanged(new PropertyChangedEventArgs("SelectedSerialPort"));}
             }
         }
+
+        //we need second selected serial ports...
+
+        private string outgoingSerialPort;
+        public string OutgoingSerialPort
+        {
+            get { return outgoingSerialPort; }
+            set
+            {
+                if (outgoingSerialPort != value)
+                {
+                    outgoingSerialPort = value;
+                    OnPropertyChanged(new PropertyChangedEventArgs("OutgoingSerialPort"));
+                }
+            }
+        }
+
+
+        private string gSMSerialPort;
+        public string GSMSerialPort
+        {
+            get { return gSMSerialPort; }
+            set
+            {
+                if (gSMSerialPort != value)
+                {
+                    gSMSerialPort = value;
+                    OnPropertyChanged(new PropertyChangedEventArgs("GSMSerialPort"));
+                }
+            }
+        }
+
+        private int outgoingBaudRate;
+        public int OutgoingBaudRate
+        {
+            get { return outgoingBaudRate; }
+            set
+            {
+                if (outgoingBaudRate != value)
+                {
+                    outgoingBaudRate = value;
+                    OnPropertyChanged(new PropertyChangedEventArgs("BaudRate"));
+                }
+            }
+        }
+
+
+        private int gSMBaudRate;
+        public int GSMBaudRate
+        {
+            get { return gSMBaudRate; }
+            set
+            {
+                if (gSMBaudRate != value)
+                {
+                    gSMBaudRate = value;
+                    OnPropertyChanged(new PropertyChangedEventArgs("GSMBaudRate"));
+                }
+            }
+        }
+
 
         private bool canStart;
         public bool CanStart{
@@ -93,17 +161,31 @@ namespace ECMA_GSM_Test.ViewModels
             var serialPorts = SerialPort.GetPortNames();
             SerialPorts.Clear();
             foreach (var port in serialPorts) { SerialPorts.Add(port); }
-            if (SerialPorts.Count(p => p == lastSelectedSerialPort) > 0) SelectedSerialPort = lastSelectedSerialPort;
-            else SelectedSerialPort = SerialPorts.FirstOrDefault();
+            if (SerialPorts.Count(p => p == lastSelectedSerialPort) > 0) OutgoingSerialPort = lastSelectedSerialPort;
+            else
+            {
+                OutgoingSerialPort = SerialPorts.FirstOrDefault();
+                GSMSerialPort = SerialPorts.FirstOrDefault();
+            }
         }
      
+        public void InitialiseBaudRates()
+        {
+            OutgoingBaudRate = BaudRates[0];
+            GSMBaudRate = BaudRates[0];
+        }
+
+
         public async void StartService(object o){
             ResultText = "Starting service";
             try {//we are currently using GSM Modems 
-                OutgoingPSDNSerialPort = new SerialPort("COM2", 115200, Parity.None, 8, StopBits.One);
+
+                //COM2,115200
+                OutgoingPSDNSerialPort = new SerialPort(OutgoingSerialPort, OutgoingBaudRate, Parity.None, 8, StopBits.One);
                 OutgoingPSDNSerialPort.Open();
                 OutgoingPSDNSerialPort.DtrEnable = true;
-                GPRSModemSerialPort = new SerialPort("COM100", 115200, Parity.None, 8, StopBits.One);
+                //COM100,115200
+                GPRSModemSerialPort = new SerialPort(GSMSerialPort, GSMBaudRate , Parity.None, 8, StopBits.One);
                 GPRSModemSerialPort.Open();
                 GPRSModemSerialPort.DtrEnable = true;
                 CanStart = false;
@@ -133,7 +215,7 @@ namespace ECMA_GSM_Test.ViewModels
                             ClosePorts();
                         }
                         else {
-                            ResultText += "CONNECTED Beginning Test" + "\n";
+                            ResultText += "CONNECTED BEGINING TEST" + "\n";
                             startOfTest = DateTime.Now;
                             int FirstModemTimesSent = 0;
                             int SecondModemTimesSent = 0;
@@ -205,14 +287,17 @@ namespace ECMA_GSM_Test.ViewModels
                 }, cancellationTokensource.Token);
             }
             catch (UnauthorizedAccessException ex){
-                ResultText += "CANNOT OPEN SERIAL PORT\n";
+                if (OutgoingPSDNSerialPort.IsOpen)
+                ResultText += "CANNOT OPEN GSM SERIAL PORT\n";
+                else
+                    ResultText += "CANNOT OPEN OUTGOING SERIAL PORT\n";
                 CanStart = true;
             }
         }
 
         public void StopService(object o){
             cancellationTokensource.Cancel();
-            //ClosePorts();
+            ClosePorts();
         }
 
         public void RefreshSerialPorts(object o){
@@ -224,13 +309,13 @@ namespace ECMA_GSM_Test.ViewModels
         {
             ResultText = "RESULTS\n";
 
-            ResultText += "FirstModem Sent " + FirstModemTimesSent + " times, recieved correctly " + FirstModemTimesRecieved + " times, recieved nothing: " + FirstModemTimesRecievedNothing + "\n";
-            ResultText += "SecondModem Sent " + SecondModemTimesSent + " times, recieved correctly " + SecondModemTimesRecieved + " times, recieved nothing: " + SecondModemTimesRecievedNothing + "\n";
+            ResultText += "Outgoing Modem Sent: " + FirstModemTimesSent + " times, recieved correctly: " + FirstModemTimesRecieved + "  ,failures: " + FirstModemTimesRecievedNothing + "\n";
+            ResultText += "        GSM Modem Sent: " + SecondModemTimesSent + " times, recieved correctly: " + SecondModemTimesRecieved + "  ,failures: " + SecondModemTimesRecievedNothing + "\n";
             
 
             //DateTime ellapsedTime = startOfTest - DateTime.Now;
 
-            ResultText += "Start Time: " + startOfTest + "End Time " + DateTime.Now + "\n";
+            ResultText += "Start Time: " + startOfTest + "    End Time " + DateTime.Now + "\n";
             if (DateTime.Now.Subtract(startOfTest).TotalHours > 0)
                 ResultText += Math.Truncate(DateTime.Now.Subtract(startOfTest).TotalHours) + " hours, " + Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes";
             else

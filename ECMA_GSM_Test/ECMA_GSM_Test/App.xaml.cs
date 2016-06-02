@@ -28,7 +28,7 @@ namespace ECMA_GSM_Test
             mainViewModel.StopCommand = new DelegateCommand<object>(mainViewModel.StopService);
             mainViewModel.RefreshSerialPortsCommand = new DelegateCommand<object>(mainViewModel.RefreshSerialPorts);
             mainViewModel.InitialiseSerialPorts(null);
-
+            mainViewModel.InitialiseBaudRates();
             MainWindow mainWindow = new MainWindow();
             mainWindow.MainView.DataContext = mainViewModel;
 

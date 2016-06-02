@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ECMA_GSM_Test"
         xmlns:views="clr-namespace:ECMA_GSM_Test.Views"
         mc:Ignorable="d"
-        Title="GSM EMC Tester" Height="650" Width="550">
+        Title="GSM EMC Tester" Height="650" Width="640">
 
             <views:MainView x:Name="MainView" ></views:MainView>
 
