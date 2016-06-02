@@ -223,7 +223,7 @@ namespace ECMA_GSM_Test.ViewModels
                             //07468761662
                             Send("ATD" + PhoneNumberTextBox, OutgoingPSDNSerialPort);
                         string response = AwaitSerialResponse(50000).ToUpper();
-                        if (response != "CONNECT") {
+                        if (!response.StartsWith("CONNECT")) {
                             ResultText += "failed to connect";
                             ClosePorts();
                         }
@@ -241,16 +241,15 @@ namespace ECMA_GSM_Test.ViewModels
                             GPRSModemSerialPort.DiscardInBuffer();
                             while (true) {
                                 try {
-                                   
-                                    Send("The quick brown fox jumps over the lazy dog", OutgoingPSDNSerialPort);//we send from 
+                                    Send("The quick brown fox jumps over the lazy dog", OutgoingPSDNSerialPort, false);//we send from 
                                         Thread.Sleep(900);
                                         response = AwaitSerialResponse(1000, false);
-                                        ResultText += response;
+                                        //ResultText += response;
                                     switch (response) //we check for results from second modem
                                     {
                                         case "The quick brown fox jumps over the lazy dog":
                                             SecondModemTimesRecieved++;
-                                            ResultText += "This is correct";
+                                            //ResultText += "This is correct";
                                             break;
                                         case "NO RESPONSE":
                                             SecondModemTimesRecievedNothing++;
@@ -260,15 +259,15 @@ namespace ECMA_GSM_Test.ViewModels
                                     }
                                     FirstModemTimesSent++;
    
-                                    Send("The quick brown fox jumps over the lazy dog", GPRSModemSerialPort);//we send from 
+                                    Send("The quick brown fox jumps over the lazy dog", GPRSModemSerialPort, false);//we send from 
                                         Thread.Sleep(900);
                                         response = AwaitSerialResponse(1000, true);
-                                        ResultText += response;
+                                        //ResultText += response;
                                         switch (response ) //we check for results from second modem
                                     {
                                         case "The quick brown fox jumps over the lazy dog":
                                             FirstModemTimesRecieved++;
-                                            ResultText += "This is correct";
+                                            //ResultText += "This is correct";
                                             break;
                                         case "NO RESPONSE":
                                             FirstModemTimesRecievedNothing++;
@@ -277,7 +276,10 @@ namespace ECMA_GSM_Test.ViewModels
                                             break;
                                     }
                                     SecondModemTimesSent++;
-                                }
+                                        DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
+                                        SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing);
+
+                                    }
                                 catch (Exception e)
                                 {
                                     ResultText += "\n\nError: " + e;
@@ -334,7 +336,7 @@ namespace ECMA_GSM_Test.ViewModels
             else
             {
                 if ((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60 > 0)
-                    ResultText +=  Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes";
+                    ResultText +=  Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes\n";
             }
 
         }
@@ -352,8 +354,9 @@ namespace ECMA_GSM_Test.ViewModels
 
         #region serialCommunications
 
-        protected void Send(string sentText, SerialPort serialPortToSend){
-            ResultText += "sending..." + sentText + "\n";
+        protected void Send(string sentText, SerialPort serialPortToSend, bool printToScreen = true){
+            if(printToScreen)
+            ResultText += "\n sending..." + sentText + "\n";
             byte[] data = ASCIIEncoding.UTF8.GetBytes(sentText + '\r');
             serialPortToSend.Write(data, 0, data.Length);
         }
