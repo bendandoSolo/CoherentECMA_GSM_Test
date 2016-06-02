@@ -57,6 +57,18 @@ namespace ECMA_GSM_Test.ViewModels
 
         //we need second selected serial ports...
 
+        public string PhoneNumberTextBox
+        {
+            get;
+            set;
+        }
+
+        public string InitialStringTextBox
+        {
+            get;
+            set;
+        }
+
         private string outgoingSerialPort;
         public string OutgoingSerialPort
         {
@@ -194,7 +206,7 @@ namespace ECMA_GSM_Test.ViewModels
                 timer = new Timer(_ => { RecordOn = !RecordOn; }, null, 0, 1000);
 
                 await Task.Run(() => {
-                Send("AT", OutgoingPSDNSerialPort);
+                Send("AT" + InitialStringTextBox, OutgoingPSDNSerialPort);
                 if (AwaitSerialResponse(5000) != "OK") {
                     ResultText += "Error connecting to outgoing modem.\n";
                     StopService(this);
@@ -208,7 +220,8 @@ namespace ECMA_GSM_Test.ViewModels
                     }
                     else {
                         ResultText += "GSM Modem responding\n";
-                        Send("ATD07468761662", OutgoingPSDNSerialPort);
+                            //07468761662
+                            Send("ATD" + PhoneNumberTextBox, OutgoingPSDNSerialPort);
                         string response = AwaitSerialResponse(50000).ToUpper();
                         if (response != "CONNECT") {
                             ResultText += "failed to connect";

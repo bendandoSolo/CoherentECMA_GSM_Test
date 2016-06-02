@@ -18,7 +18,7 @@
             <DockPanel DockPanel.Dock="Top" >
                 <logo:Logo HorizontalAlignment="Left" />
                 
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin ="25,0,0,0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin ="25,5,0,0">
                     <!--<TextBlock Margin="10,0,0,0">Serial port:</TextBlock>
                     <ComboBox  HorizontalAlignment="Right" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding SelectedSerialPort}" Margin="10,0,0,0"/>-->
                     <TextBlock Margin="10,0,0,0">Outgoing Modem Baud Rate:</TextBlock>
@@ -33,8 +33,22 @@
             </DockPanel>
 
             <DockPanel DockPanel.Dock="Top" >
-                <!--<logo:Logo HorizontalAlignment="Left" />-->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin ="150,5,0,0">
+                    <TextBlock Margin="10,0,0,0" >Phone Number:</TextBlock>
+                    <TextBox Width="350" Text="{Binding PhoneNumberTextBox}"></TextBox>
+                </StackPanel>
+            </DockPanel>
 
+            <DockPanel DockPanel.Dock="Top" >
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin ="132,5,0,5">
+                    <TextBlock Margin="10,0,0,0">Initialization String:</TextBlock>
+                    <TextBox Width="350" Text="{Binding InitialStringTextBox}"></TextBox>
+                </StackPanel>
+            </DockPanel>
+
+            
+            <DockPanel DockPanel.Dock="Top" >
+                <!--<logo:Logo HorizontalAlignment="Left" />-->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin ="150,0,0,0">
                     <!--<TextBlock Margin="10,0,0,0">Serial port:</TextBlock>
                     <ComboBox  HorizontalAlignment="Right" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding SelectedSerialPort}" Margin="10,0,0,0"/>-->
@@ -46,7 +60,6 @@
                         <Image HorizontalAlignment="Right" Source="/ECMA_GSM_Test;component/Images/Refresh.png"></Image>
                     </Button>-->
                 </StackPanel>
-
             </DockPanel>
 
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,10,0,10" Height="50">
