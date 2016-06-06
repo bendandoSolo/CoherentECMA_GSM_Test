@@ -222,9 +222,14 @@ namespace ECMA_GSM_Test.ViewModels
                         ResultText += "GSM Modem responding\n";
                             //07468761662
                             Send("ATD" + PhoneNumberTextBox, OutgoingPSDNSerialPort);
-                        string response = AwaitSerialResponse(50000).ToUpper();
+
+                            //Send("ATD" + PhoneNumberTextBox, GPRSModemSerialPort);
+                            string response = AwaitSerialResponse(50000).ToUpper();
                         if (!response.StartsWith("CONNECT")) {
-                            ResultText += "failed to connect";
+                                if (response.Contains("NO CARRIER"))
+                                    ResultText += "NO CARRIER";
+                                else
+                                ResultText += "failed to connect error: " + response;
                             ClosePorts();
                         }
                         else {
@@ -234,6 +239,8 @@ namespace ECMA_GSM_Test.ViewModels
                             int SecondModemTimesSent = 0;
                             int FirstModemTimesRecieved = 0;
                             int SecondModemTimesRecieved = 0;
+                            int FirstModemTimesRecievedIncorrectly = 0;
+                            int SecondModemTimesRecievedIncorrectly = 0;
                             int FirstModemTimesRecievedNothing = 0;
                             int SecondModemTimesRecievedNothing = 0;
 
@@ -255,11 +262,14 @@ namespace ECMA_GSM_Test.ViewModels
                                             SecondModemTimesRecievedNothing++;
                                             break;
                                         default:
+                                                SecondModemTimesRecievedIncorrectly++;
                                             break;
                                     }
-                                    FirstModemTimesSent++;
-   
-                                    Send("The quick brown fox jumps over the lazy dog", GPRSModemSerialPort, false);//we send from 
+                                    SecondModemTimesSent++;
+                                        DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
+                                          SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
+
+                                        Send("The quick brown fox jumps over the lazy dog", GPRSModemSerialPort, false);//we send from 
                                         Thread.Sleep(900);
                                         response = AwaitSerialResponse(1000, true);
                                         //ResultText += response;
@@ -273,12 +283,12 @@ namespace ECMA_GSM_Test.ViewModels
                                             FirstModemTimesRecievedNothing++;
                                             break;
                                         default:
+                                            FirstModemTimesRecievedIncorrectly++;
                                             break;
                                     }
-                                    SecondModemTimesSent++;
+                                    FirstModemTimesSent++;
                                         DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
-                                        SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing);
-
+                                        SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
                                     }
                                 catch (Exception e)
                                 {
@@ -290,9 +300,9 @@ namespace ECMA_GSM_Test.ViewModels
                                 if (ct.IsCancellationRequested) {
                                     ResultText += "we are cancelling the test\n";
                                         if (OutgoingPSDNSerialPort.IsOpen && GPRSModemSerialPort.IsOpen) { ClosePorts(); }
-                                        DisplayResults(FirstModemTimesSent,SecondModemTimesSent, FirstModemTimesRecieved,
-                                         SecondModemTimesRecieved,FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing);
-                                                    timer.Dispose();
+                                        DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
+                                        SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
+                                        timer.Dispose();
                                                     break;
                                                 }
                                             }
@@ -320,12 +330,12 @@ namespace ECMA_GSM_Test.ViewModels
         }
 
         private void DisplayResults(int FirstModemTimesSent,int SecondModemTimesSent,int FirstModemTimesRecieved,int SecondModemTimesRecieved,
-            int FirstModemTimesRecievedNothing,int SecondModemTimesRecievedNothing)
+            int FirstModemTimesRecievedNothing,int SecondModemTimesRecievedNothing,int FirstModemTimesRecievedIncorrectly,int SecondModemTimesRecievedIncorrectly)
         {
             ResultText = "RESULTS\n";
 
-            ResultText += "Outgoing Modem Sent: " + FirstModemTimesSent + " times, recieved correctly: " + FirstModemTimesRecieved + "  ,failures: " + FirstModemTimesRecievedNothing + "\n";
-            ResultText += "        GSM Modem Sent: " + SecondModemTimesSent + " times, recieved correctly: " + SecondModemTimesRecieved + "  ,failures: " + SecondModemTimesRecievedNothing + "\n";
+            ResultText += "Transmissions to 1st Modem:  " + FirstModemTimesSent + " Correct Responses: " + FirstModemTimesRecieved + " Incorrect Responses: " + FirstModemTimesRecievedIncorrectly + " NO RESPONSE: " + FirstModemTimesRecievedNothing + "\n";
+            ResultText += "Transmissions to 2nd Modem: " + SecondModemTimesSent + " Correct Responses: " + SecondModemTimesRecieved + " Incorrect Responses: " + SecondModemTimesRecievedIncorrectly + " NO RESPONSE: " + SecondModemTimesRecievedNothing + "\n";
             
 
             //DateTime ellapsedTime = startOfTest - DateTime.Now;
