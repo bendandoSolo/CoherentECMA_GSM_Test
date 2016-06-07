@@ -25,8 +25,19 @@ namespace ECMA_GSM_Test.ViewModels
 
         //initially we make a call from serial port 109 which is a CSDN Modem, at 9600
         //we dial our GPRS modem and COM100, and send and recieve data noting an errors.
-        SerialPort OutgoingPSDNSerialPort;
-        SerialPort GPRSModemSerialPort;
+        SerialPort FirstModemSerialPort;
+        SerialPort SecondModemSerialPort;
+
+        int FirstModemTimesSent = 0;
+        int SecondModemTimesSent = 0;
+        int FirstModemTimesRecieved = 0;
+        int SecondModemTimesRecieved = 0;
+        int FirstModemTimesRecievedIncorrectly = 0;
+        int SecondModemTimesRecievedIncorrectly = 0;
+        int FirstModemTimesRecievedNothing = 0;
+        int SecondModemTimesRecievedNothing = 0;
+
+
 
         private bool recordOn;
         public bool RecordOn{
@@ -188,107 +199,108 @@ namespace ECMA_GSM_Test.ViewModels
         }
 
 
-        public async void StartService(object o){
-            ResultText = "Starting service";
-            try {//we are currently using GSM Modems 
+        public async void StartServiceTEST(object o)
+        {
+            try
+            {
+                SecondModemSerialPort = new SerialPort(GSMSerialPort, GSMBaudRate, Parity.None, 8, StopBits.One);
+                SecondModemSerialPort.Open();
+                SecondModemSerialPort.DtrEnable = true;
+                CanStart = false;
+                cancellationTokensource = new CancellationTokenSource();
+                CancellationToken ct = cancellationTokensource.Token;
+                timer = new Timer(_ => { RecordOn = !RecordOn; }, null, 0, 1000);
 
-                //COM2,115200
-                OutgoingPSDNSerialPort = new SerialPort(OutgoingSerialPort, OutgoingBaudRate, Parity.None, 8, StopBits.One);
-                OutgoingPSDNSerialPort.Open();
-                OutgoingPSDNSerialPort.DtrEnable = true;
-                //COM100,115200
-                GPRSModemSerialPort = new SerialPort(GSMSerialPort, GSMBaudRate , Parity.None, 8, StopBits.One);
-                GPRSModemSerialPort.Open();
-                GPRSModemSerialPort.DtrEnable = true;
+                await Task.Run(() =>
+                {
+                    Send("AT" + InitialStringTextBox, SecondModemSerialPort);
+                    if (AwaitSerialResponse(5000, SecondModemSerialPort) != "OK")
+                    {
+                        ResultText += "Error connecting to outgoing modem.\n";
+                        StopService(this);
+                    }
+                    else
+                    {
+                        ResultText = "we have a connection";
+                        Thread.Sleep(30000);
+                        while(true)
+                        {
+                            // string response = AwaitSerialResponse(2000, SecondModemSerialPort);
+                            // ResultText += "my responses: " + response;
+                            Send("The quick brown fox jumps over the lazy dog\n", SecondModemSerialPort, true);//we send from 
+                            Thread.Sleep(5000);
+                        }
+
+
+
+                    }
+
+                }, cancellationTokensource.Token);
+            }
+            catch (Exception e)
+            {
+                ResultText = e.ToString();
+            }
+       }
+
+        public async void StartService(object o){
+            try {
+                FirstModemSerialPort = new SerialPort(OutgoingSerialPort, OutgoingBaudRate, Parity.None, 8, StopBits.One);
+                FirstModemSerialPort.Open();
+                FirstModemSerialPort.DtrEnable = true;
+                FirstModemSerialPort.RtsEnable = true;
+                SecondModemSerialPort = new SerialPort(GSMSerialPort, GSMBaudRate , Parity.None, 8, StopBits.One);
+                SecondModemSerialPort.Open();
+                SecondModemSerialPort.DtrEnable = true;
+                SecondModemSerialPort.RtsEnable = true;
                 CanStart = false;
                 cancellationTokensource = new CancellationTokenSource();
                 CancellationToken ct = cancellationTokensource.Token;
                 timer = new Timer(_ => { RecordOn = !RecordOn; }, null, 0, 1000);
 
                 await Task.Run(() => {
-                Send("AT" + InitialStringTextBox, OutgoingPSDNSerialPort);
-                if (AwaitSerialResponse(5000) != "OK") {
+                Send("AT" + InitialStringTextBox, FirstModemSerialPort);
+                if (AwaitSerialResponse(5000, FirstModemSerialPort) != "OK") {
                     ResultText += "Error connecting to outgoing modem.\n";
                     StopService(this);
                 }
                 else {
-                    ResultText += "PSDN responding";
-                    Send("AT", GPRSModemSerialPort);
-                    if (AwaitSerialResponse(5000, false) != "OK") {
-                        ResultText += "Error connecting to GSM modem.\n";
+                    ResultText += "1st Modem responding to AT"+ InitialStringTextBox + " on " + FirstModemSerialPort.PortName + "\n";
+                    Send("AT", SecondModemSerialPort);
+                    if (AwaitSerialResponse(5000, SecondModemSerialPort) != "OK") {
+                        ResultText += "Error connecting to 2nd modem.\n";
                         StopService(this);
                     }
                     else {
-                        ResultText += "GSM Modem responding\n";
-                            //07468761662
-                            Send("ATD" + PhoneNumberTextBox, OutgoingPSDNSerialPort);
-
-                            //Send("ATD" + PhoneNumberTextBox, GPRSModemSerialPort);
-                            string response = AwaitSerialResponse(50000).ToUpper();
+                        ResultText += "2nd Modem responding to AT" + " on " + SecondModemSerialPort.PortName + "\nDIALING ON " + FirstModemSerialPort.PortName + "\n";                           //07468761662
+                            Send("ATD" + PhoneNumberTextBox, FirstModemSerialPort);
+                        string response = AwaitSerialResponse(50000,FirstModemSerialPort).ToUpper();
                         if (!response.StartsWith("CONNECT")) {
-                                if (response.Contains("NO CARRIER"))
-                                    ResultText += "NO CARRIER";
-                                else
-                                ResultText += "failed to connect error: " + response;
+                                if (response.Contains("NO CARRIER"))ResultText += "NO CARRIER";
+                                else ResultText += "failed to connect error: " + response;
                             ClosePorts();
                         }
                         else {
                             ResultText += "CONNECTED BEGINING TEST" + "\n";
                             startOfTest = DateTime.Now;
-                            int FirstModemTimesSent = 0;
-                            int SecondModemTimesSent = 0;
-                            int FirstModemTimesRecieved = 0;
-                            int SecondModemTimesRecieved = 0;
-                            int FirstModemTimesRecievedIncorrectly = 0;
-                            int SecondModemTimesRecievedIncorrectly = 0;
-                            int FirstModemTimesRecievedNothing = 0;
-                            int SecondModemTimesRecievedNothing = 0;
 
-                            OutgoingPSDNSerialPort.DiscardInBuffer();
-                            GPRSModemSerialPort.DiscardInBuffer();
+                            FirstModemTimesSent = 0;
+                            SecondModemTimesSent = 0;
+                            FirstModemTimesRecieved = 0;
+                            SecondModemTimesRecieved = 0;
+                            FirstModemTimesRecievedIncorrectly = 0;
+                            SecondModemTimesRecievedIncorrectly = 0;
+                            FirstModemTimesRecievedNothing = 0;
+                            SecondModemTimesRecievedNothing = 0;
+
+
+                                FirstModemSerialPort.DiscardInBuffer();
+                            SecondModemSerialPort.DiscardInBuffer();
                             while (true) {
                                 try {
-                                    Send("The quick brown fox jumps over the lazy dog", OutgoingPSDNSerialPort, false);//we send from 
-                                        Thread.Sleep(900);
-                                        response = AwaitSerialResponse(1000, false);
-                                        //ResultText += response;
-                                    switch (response) //we check for results from second modem
-                                    {
-                                        case "The quick brown fox jumps over the lazy dog":
-                                            SecondModemTimesRecieved++;
-                                            //ResultText += "This is correct";
-                                            break;
-                                        case "NO RESPONSE":
-                                            SecondModemTimesRecievedNothing++;
-                                            break;
-                                        default:
-                                                SecondModemTimesRecievedIncorrectly++;
-                                            break;
-                                    }
-                                    SecondModemTimesSent++;
-                                        DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
-                                          SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
+                                        SendFromFirstSerialPort();
+                                        SendFromSecondSerialPort();
 
-                                        Send("The quick brown fox jumps over the lazy dog", GPRSModemSerialPort, false);//we send from 
-                                        Thread.Sleep(900);
-                                        response = AwaitSerialResponse(1000, true);
-                                        //ResultText += response;
-                                        switch (response ) //we check for results from second modem
-                                    {
-                                        case "The quick brown fox jumps over the lazy dog":
-                                            FirstModemTimesRecieved++;
-                                            //ResultText += "This is correct";
-                                            break;
-                                        case "NO RESPONSE":
-                                            FirstModemTimesRecievedNothing++;
-                                            break;
-                                        default:
-                                            FirstModemTimesRecievedIncorrectly++;
-                                            break;
-                                    }
-                                    FirstModemTimesSent++;
-                                        DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
-                                        SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
                                     }
                                 catch (Exception e)
                                 {
@@ -296,10 +308,9 @@ namespace ECMA_GSM_Test.ViewModels
                                     cancellationTokensource.Cancel();
                                 }
 
-
                                 if (ct.IsCancellationRequested) {
                                     ResultText += "we are cancelling the test\n";
-                                        if (OutgoingPSDNSerialPort.IsOpen && GPRSModemSerialPort.IsOpen) { ClosePorts(); }
+                                        if (FirstModemSerialPort.IsOpen || SecondModemSerialPort.IsOpen) { ClosePorts(); }
                                         DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
                                         SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
                                         timer.Dispose();
@@ -312,13 +323,14 @@ namespace ECMA_GSM_Test.ViewModels
                 }, cancellationTokensource.Token);
             }
             catch (UnauthorizedAccessException ex){
-                if (OutgoingPSDNSerialPort.IsOpen)
+                if (FirstModemSerialPort.IsOpen)
                 ResultText += "CANNOT OPEN GSM SERIAL PORT\n";
                 else
                     ResultText += "CANNOT OPEN OUTGOING SERIAL PORT\n";
                 CanStart = true;
             }
         }
+
 
         public void StopService(object o){
             cancellationTokensource.Cancel();
@@ -332,14 +344,9 @@ namespace ECMA_GSM_Test.ViewModels
         private void DisplayResults(int FirstModemTimesSent,int SecondModemTimesSent,int FirstModemTimesRecieved,int SecondModemTimesRecieved,
             int FirstModemTimesRecievedNothing,int SecondModemTimesRecievedNothing,int FirstModemTimesRecievedIncorrectly,int SecondModemTimesRecievedIncorrectly)
         {
-            ResultText = "RESULTS\n";
-
-            ResultText += "Transmissions to 1st Modem:  " + FirstModemTimesSent + " Correct Responses: " + FirstModemTimesRecieved + " Incorrect Responses: " + FirstModemTimesRecievedIncorrectly + " NO RESPONSE: " + FirstModemTimesRecievedNothing + "\n";
-            ResultText += "Transmissions to 2nd Modem: " + SecondModemTimesSent + " Correct Responses: " + SecondModemTimesRecieved + " Incorrect Responses: " + SecondModemTimesRecievedIncorrectly + " NO RESPONSE: " + SecondModemTimesRecievedNothing + "\n";
-            
-
-            //DateTime ellapsedTime = startOfTest - DateTime.Now;
-
+            ResultText = "TEST RESULTS:\n";
+            ResultText += "Transmissions to 1st Modem:  " + FirstModemTimesSent + " Correct Responses: " + FirstModemTimesRecieved + " Incorrect Responses: " + FirstModemTimesRecievedIncorrectly + " Response Timeout: " + FirstModemTimesRecievedNothing + "\n";
+            ResultText += "Transmissions to 2nd Modem: " + SecondModemTimesSent + " Correct Responses: " + SecondModemTimesRecieved + " Incorrect Responses: " + SecondModemTimesRecievedIncorrectly + " Response Timeout: " + SecondModemTimesRecievedNothing + "\n";
             ResultText += "Start Time: " + startOfTest + "    End Time " + DateTime.Now + "\n";
             if (DateTime.Now.Subtract(startOfTest).TotalHours > 0)
                 ResultText += Math.Truncate(DateTime.Now.Subtract(startOfTest).TotalHours) + " hours, " + Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes";
@@ -348,30 +355,68 @@ namespace ECMA_GSM_Test.ViewModels
                 if ((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60 > 0)
                     ResultText +=  Math.Truncate((DateTime.Now.Subtract(startOfTest).TotalMinutes) % 60) + " minutes\n";
             }
-
         }
-
-
 
         private void ClosePorts()
         {
-            OutgoingPSDNSerialPort.Close();
-            GPRSModemSerialPort.Close();
+            if (FirstModemSerialPort.IsOpen)
+            FirstModemSerialPort.Close();
+            if (SecondModemSerialPort.IsOpen)
+            SecondModemSerialPort.Close();
             CanStart = true;
-            ResultText += "Stopping Service\n";
+            ResultText += "\nSTOPPING SERVICE\n";
             timer.Dispose();
         }
 
         #region serialCommunications
 
+        private void SendFromFirstSerialPort()
+        {
+            Send("The quick brown fox jumps over the lazy dog", FirstModemSerialPort, false);//we send from 
+            switch (AwaitSerialResponse(5000, SecondModemSerialPort)) //we check for results from second modem
+            {
+                case "The quick brown fox jumps over the lazy dog":
+                    SecondModemTimesRecieved++;
+                    break;
+                case "RESPONSE TIMEOUT":
+                    SecondModemTimesRecievedNothing++;
+                    break;
+                default:
+                    SecondModemTimesRecievedIncorrectly++;
+                    break;
+            }
+            SecondModemTimesSent++;
+            DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
+            SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
+        }
+
+        private void SendFromSecondSerialPort()
+        {
+            Send("The quick brown fox jumps over the lazy dog", SecondModemSerialPort, false);//we send from 
+            switch (AwaitSerialResponse(5000, FirstModemSerialPort)) //we check for results from second modem
+            {
+                case "The quick brown fox jumps over the lazy dog":
+                    FirstModemTimesRecieved++;
+                    break;
+                case "RESPONSE TIMEOUT":
+                    FirstModemTimesRecievedNothing++;
+                    break;
+                default:
+                    FirstModemTimesRecievedIncorrectly++;
+                    break;
+            }
+            FirstModemTimesSent++;
+                DisplayResults(FirstModemTimesSent, SecondModemTimesSent, FirstModemTimesRecieved,
+                SecondModemTimesRecieved, FirstModemTimesRecievedNothing, SecondModemTimesRecievedNothing, FirstModemTimesRecievedIncorrectly, SecondModemTimesRecievedIncorrectly);
+        }
+
         protected void Send(string sentText, SerialPort serialPortToSend, bool printToScreen = true){
             if(printToScreen)
-            ResultText += "\n sending..." + sentText + "\n";
+            ResultText += "  sending..." + sentText + "\n";
             byte[] data = ASCIIEncoding.UTF8.GetBytes(sentText + '\r');
             serialPortToSend.Write(data, 0, data.Length);
         }
         
-
         //really we should refactor 
         private void DataRecieved(object sender, SerialDataReceivedEventArgs e ){
             resultText += "we have recieved a response?";
@@ -379,29 +424,23 @@ namespace ECMA_GSM_Test.ViewModels
             Thread.Sleep(25);   //wait incase we have some data still being transmitted
             byte[] serialPortReadByteArray = new byte[1000];
             var data = new List<byte>();
-            int n = OutgoingPSDNSerialPort.Read(serialPortReadByteArray, 0, serialPortReadByteArray.Length); //read to byte array
+            int n = FirstModemSerialPort.Read(serialPortReadByteArray, 0, serialPortReadByteArray.Length); //read to byte array
             data.AddRange(serialPortReadByteArray.Take(n));
             string response = ASCIIEncoding.ASCII.GetString(data.ToArray(), 0, data.Count);
             Regex.Replace(response, "\x63", String.Empty);
             ResultText += "response from serial port: " + response;
         }
 
-
-
-        //by default psdn...
-        private string AwaitSerialResponse(int MaximumWaitTimeMs, bool IsPSDN = true){
+        private string AwaitSerialResponse(int MaximumWaitTimeMs, SerialPort watchedSerialPort){
             string responseToCommand = null;
             int EllapsedMs = 0;
-            byte[] serialPortReadByteArray = new byte[20000];
+            byte[] serialPortReadByteArray = new byte[4096];
             var data = new List<byte>();
-            SerialPort serialPortWeAreInterstedIn = GPRSModemSerialPort;
-            if (IsPSDN)
-                serialPortWeAreInterstedIn = OutgoingPSDNSerialPort;
             while (MaximumWaitTimeMs > EllapsedMs)
             {
-                if (serialPortWeAreInterstedIn.BytesToRead > 0){
-                    Thread.Sleep(10); //we wait another 1ms incase the buffer is still being written to..
-                    int n = serialPortWeAreInterstedIn.Read(serialPortReadByteArray, 0, serialPortReadByteArray.Length); //read to byte array
+                if (watchedSerialPort.BytesToRead > 0){
+                    Thread.Sleep(100); //we wait another 1ms incase the buffer is still being written to..
+                    int n = watchedSerialPort.Read(serialPortReadByteArray, 0, serialPortReadByteArray.Length); //read to byte array
                     data.AddRange(serialPortReadByteArray.Take(n));
                     responseToCommand = ASCIIEncoding.ASCII.GetString(data.ToArray(), 0, data.Count);
                     Regex.Replace(responseToCommand, "\x63", String.Empty);
@@ -410,7 +449,7 @@ namespace ECMA_GSM_Test.ViewModels
                 Thread.Sleep(10);
                 EllapsedMs+=10;
             }
-            return "NO RESPONSE";
+            return "RESPONSE TIMEOUT";
         }
 
         #endregion
